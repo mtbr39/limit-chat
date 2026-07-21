@@ -1,15 +1,17 @@
 import { useState, useEffect, useRef } from 'react';
-import { Message, User, Room } from '../types';
+import { Message, Participant, Session } from '../types';
+import { SurvivalState, canSpeak, formatDuration } from '../lib/survival';
 
 interface Props {
   messages: Message[];
-  user: User | null;
-  room: Room | null;
-  timeRemaining: number | null;
+  me: Participant | null;
+  session: Session;
+  state: SurvivalState;
+  now: number;
   onSendMessage: (text: string) => void;
 }
 
-export function ChatRoom({ messages, user, room, timeRemaining, onSendMessage }: Props) {
+export function ChatRoom({ messages, me, session, state, now, onSendMessage }: Props) {
   const [text, setText] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -17,33 +19,69 @@ export function ChatRoom({ messages, user, room, timeRemaining, onSendMessage }:
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  const speakable = canSpeak(state);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (text.trim() && user && !user.isEliminated) {
+    if (text.trim() && speakable) {
       onSendMessage(text.trim());
       setText('');
     }
   };
 
-  const formatTime = (ms: number) => {
-    const seconds = Math.ceil(ms / 1000);
-    return `${seconds}秒`;
-  };
+  const remaining = state.deadline !== null ? state.deadline - now : null;
+  const sessionRemaining = session.endTime - now;
 
-  const isGameStarted = room?.isActive;
-  const canSendMessage = user && !user.isEliminated && isGameStarted;
+  const placeholder = () => {
+    switch (state.status) {
+      case 'waiting':
+        return '開始時間になるまで待ってください';
+      case 'eliminated':
+        return '脱落しました';
+      case 'survived':
+      case 'silent':
+        return 'このセッションは終了しました';
+      default:
+        return 'メッセージを入力...';
+    }
+  };
 
   return (
     <div className="chat-room">
-      {timeRemaining !== null && user && !user.isEliminated && (
-        <div className={`timer ${timeRemaining < 15000 ? 'danger' : timeRemaining < 30000 ? 'warning' : ''}`}>
-          残り時間: {formatTime(timeRemaining)}
+      {state.status === 'grace' && (
+        <div className="banner grace">
+          まだ沈黙タイマーは動いていません。最初の発言をするとカウントが始まります。
         </div>
       )}
 
-      {user?.isEliminated && (
-        <div className="eliminated-banner">
+      {state.status === 'alive' && remaining !== null && (
+        <div
+          className={`timer ${
+            remaining < 15000 ? 'danger' : remaining < 30000 ? 'warning' : ''
+          }`}
+        >
+          沈黙まで残り {formatDuration(remaining)}
+          <span className="session-remaining">
+            ／終了まで {formatDuration(sessionRemaining)}
+          </span>
+        </div>
+      )}
+
+      {state.status === 'eliminated' && (
+        <div className="banner dead">
           あなたは脱落しました。観戦モードです。
+        </div>
+      )}
+
+      {state.status === 'survived' && (
+        <div className="banner survived">
+          🎉 最後まで生き残りました！
+        </div>
+      )}
+
+      {state.status === 'silent' && (
+        <div className="banner silent">
+          一度も発言しないままセッションが終了しました。
         </div>
       )}
 
@@ -51,12 +89,15 @@ export function ChatRoom({ messages, user, room, timeRemaining, onSendMessage }:
         {messages.map((msg) => (
           <div
             key={msg.id}
-            className={`message ${msg.userId === user?.id ? 'mine' : ''}`}
+            className={`message ${msg.userId === me?.id ? 'mine' : ''}`}
           >
             <span className="sender">{msg.userName}</span>
             <span className="text">{msg.text}</span>
           </div>
         ))}
+        {messages.length === 0 && (
+          <p className="empty">まだ発言がありません</p>
+        )}
         <div ref={messagesEndRef} />
       </div>
 
@@ -65,16 +106,11 @@ export function ChatRoom({ messages, user, room, timeRemaining, onSendMessage }:
           type="text"
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder={
-            !isGameStarted
-              ? 'ゲーム開始を待っています...'
-              : user?.isEliminated
-              ? '脱落しました'
-              : 'メッセージを入力...'
-          }
-          disabled={!canSendMessage}
+          placeholder={placeholder()}
+          maxLength={500}
+          disabled={!speakable}
         />
-        <button type="submit" disabled={!canSendMessage || !text.trim()}>
+        <button type="submit" disabled={!speakable || !text.trim()}>
           送信
         </button>
       </form>

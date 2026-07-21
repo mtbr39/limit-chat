@@ -1,62 +1,48 @@
-import { useState, useEffect } from 'react';
-import { signInAnonymously, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { doc, setDoc, getDoc, onSnapshot } from 'firebase/firestore';
-import { auth, db } from '../firebase';
-import { User } from '../types';
+import { useState, useEffect, useCallback } from 'react';
+import {
+  signInAnonymously,
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+  User as FirebaseUser,
+} from 'firebase/auth';
+import { auth } from '../firebase';
 
-export function useAuth(roomId: string) {
+/**
+ * 参加者は匿名ログイン、管理者はメール/パスワードでログインする。
+ * 「特別なログイン」= 非匿名アカウントであること。
+ */
+export function useAuth() {
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
-  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (fbUser) => {
+    return onAuthStateChanged(auth, (fbUser) => {
       setFirebaseUser(fbUser);
       setLoading(false);
-    });
-    return unsubscribe;
-  }, []);
-
-  useEffect(() => {
-    if (!firebaseUser || !roomId) return;
-
-    const userDocRef = doc(db, 'rooms', roomId, 'users', firebaseUser.uid);
-    const unsubscribe = onSnapshot(userDocRef, (snapshot) => {
-      if (snapshot.exists()) {
-        setUser({ id: snapshot.id, ...snapshot.data() } as User);
+      if (!fbUser) {
+        signInAnonymously(auth).catch((e) =>
+          console.error('匿名ログインに失敗しました', e)
+        );
       }
     });
+  }, []);
 
-    return unsubscribe;
-  }, [firebaseUser, roomId]);
+  const signInAsAdmin = useCallback(async (email: string, password: string) => {
+    await signInWithEmailAndPassword(auth, email, password);
+  }, []);
 
-  const signIn = async () => {
-    try {
-      await signInAnonymously(auth);
-    } catch (error) {
-      console.error('Sign in error:', error);
-    }
+  const signOutAdmin = useCallback(async () => {
+    await signOut(auth);
+    await signInAnonymously(auth);
+  }, []);
+
+  return {
+    firebaseUser,
+    uid: firebaseUser?.uid ?? null,
+    isAdmin: !!firebaseUser && !firebaseUser.isAnonymous,
+    loading,
+    signInAsAdmin,
+    signOutAdmin,
   };
-
-  const setName = async (name: string) => {
-    if (!firebaseUser || !roomId) return;
-
-    const userDocRef = doc(db, 'rooms', roomId, 'users', firebaseUser.uid);
-    const now = Date.now();
-
-    const existingDoc = await getDoc(userDocRef);
-    if (existingDoc.exists()) {
-      await setDoc(userDocRef, { name }, { merge: true });
-    } else {
-      const newUser: Omit<User, 'id'> = {
-        name,
-        isEliminated: false,
-        lastMessageAt: now,
-        joinedAt: now,
-      };
-      await setDoc(userDocRef, newUser);
-    }
-  };
-
-  return { firebaseUser, user, loading, signIn, setName };
 }

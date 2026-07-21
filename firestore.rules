@@ -1,0 +1,49 @@
+rules_version = '2';
+
+// 管理者 = メール/パスワードでログインした非匿名ユーザー
+// 参加者 = 匿名ログインユーザー
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.firebase.sign_in_provider != 'anonymous';
+    }
+
+    match /groups/{groupId} {
+      allow read: if isSignedIn();
+      allow create: if isAdmin() && request.resource.data.ownerUid == request.auth.uid;
+      allow update, delete: if isAdmin() && resource.data.ownerUid == request.auth.uid;
+
+      // 参加時に自分のメンバー記録を作る
+      match /members/{uid} {
+        allow read: if isSignedIn();
+        allow write: if isSignedIn() && request.auth.uid == uid;
+      }
+
+      match /sessions/{sessionId} {
+        allow read: if isSignedIn();
+        allow write: if isAdmin();
+
+        // 参加者ドキュメントは本人しか書けない。
+        // 脱落フラグは保存せず lastMessageAt から導出するので、
+        // 他人を脱落させる書き込み自体が存在しない。
+        match /participants/{uid} {
+          allow read: if isSignedIn();
+          allow create, update: if isSignedIn() && request.auth.uid == uid;
+          allow delete: if false;
+        }
+
+        match /messages/{messageId} {
+          allow read: if isSignedIn();
+          allow create: if isSignedIn()
+            && request.resource.data.userId == request.auth.uid;
+          allow update, delete: if false;
+        }
+      }
+    }
+  }
+}
