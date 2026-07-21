@@ -16,6 +16,8 @@ export interface Session {
   silenceLimitMs: number;
   createdAt: number;
   createdBy: string;
+  /** キャンセルされた時刻。開催中でも中止できる。未設定なら開催予定どおり */
+  canceledAt?: number | null;
 }
 
 export interface Participant {

@@ -5,6 +5,7 @@ import {
   getDoc,
   getDocs,
   onSnapshot,
+  updateDoc,
   collection,
   query,
   orderBy,
@@ -65,6 +66,26 @@ export function useGroup(groupId: string | null, uid: string | null) {
 
   const membership = members.find((m) => m.id === uid) ?? null;
 
+  /**
+   * セッションとは独立してグループのメンバーになる。
+   * 開催前でもひとことを書けるように、参加の入口をここに置く。
+   */
+  const joinGroup = useCallback(
+    async (name: string) => {
+      if (!groupId || !uid) return;
+      const ref = doc(db, 'groups', groupId, 'members', uid);
+      const existing = await getDoc(ref);
+      await setDoc(
+        ref,
+        existing.exists()
+          ? { name }
+          : { name, joinedAt: Date.now(), note: '', noteUpdatedAt: null },
+        { merge: true }
+      );
+    },
+    [groupId, uid]
+  );
+
   /** 自分のひとことを更新する */
   const updateNote = useCallback(
     async (note: string) => {
@@ -78,7 +99,7 @@ export function useGroup(groupId: string | null, uid: string | null) {
     [groupId, uid]
   );
 
-  return { group, sessions, members, membership, loading, updateNote };
+  return { group, sessions, members, membership, loading, joinGroup, updateNote };
 }
 
 /** トップページ用のグループ一覧 */
@@ -148,6 +169,7 @@ export function useGroupAdmin(uid: string | null) {
       const existing = await getDocs(collection(db, 'groups', groupId, 'sessions'));
       const conflict = existing.docs
         .map((d) => d.data() as Omit<Session, 'id'>)
+        .filter((s) => !s.canceledAt)
         .find((s) => input.startTime < s.endTime && s.startTime < input.endTime);
       if (conflict) {
         throw new Error(
@@ -169,5 +191,27 @@ export function useGroupAdmin(uid: string | null) {
     [uid]
   );
 
-  return { createGroup, createSession };
+  /**
+   * セッションを中止する。ドキュメントは消さずに印を付けるだけにして、
+   * すでに残っている発言や参加記録を失わないようにする。
+   */
+  const cancelSession = useCallback(
+    async (groupId: string, sessionId: string) => {
+      await updateDoc(doc(db, 'groups', groupId, 'sessions', sessionId), {
+        canceledAt: Date.now(),
+      });
+    },
+    []
+  );
+
+  const restoreSession = useCallback(
+    async (groupId: string, sessionId: string) => {
+      await updateDoc(doc(db, 'groups', groupId, 'sessions', sessionId), {
+        canceledAt: null,
+      });
+    },
+    []
+  );
+
+  return { createGroup, createSession, cancelSession, restoreSession };
 }

@@ -2,6 +2,7 @@ import { useGroup } from '../hooks/useGroup';
 import { useNow } from '../hooks/useNow';
 import { LiveSession } from '../components/LiveSession';
 import { MemberList } from '../components/MemberList';
+import { GroupJoinForm } from '../components/GroupJoinForm';
 import { Session } from '../types';
 import { sessionPath, linkProps } from '../lib/router';
 import { sessionPhase, formatRange, formatDuration } from '../lib/survival';
@@ -14,10 +15,8 @@ interface Props {
 }
 
 export function GroupPage({ groupId, uid, isAdmin, navigate }: Props) {
-  const { group, sessions, members, membership, loading, updateNote } = useGroup(
-    groupId,
-    uid
-  );
+  const { group, sessions, members, membership, loading, joinGroup, updateNote } =
+    useGroup(groupId, uid);
   const now = useNow(1000);
 
   if (loading) return <div className="loading">読み込み中...</div>;
@@ -33,12 +32,15 @@ export function GroupPage({ groupId, uid, isAdmin, navigate }: Props) {
     );
   }
 
+  // キャンセルされた回は参加者側には出さない
+  const activeSessions = sessions.filter((s) => !s.canceledAt);
+
   // 同時に開催されるセッションは 1 つだけ
-  const liveSession = sessions.find((s) => sessionPhase(s, now) === 'live') ?? null;
-  const upcoming = sessions
+  const liveSession = activeSessions.find((s) => sessionPhase(s, now) === 'live') ?? null;
+  const upcoming = activeSessions
     .filter((s) => sessionPhase(s, now) === 'before')
     .sort((a, b) => a.startTime - b.startTime);
-  const past = sessions.filter((s) => sessionPhase(s, now) === 'ended');
+  const past = activeSessions.filter((s) => sessionPhase(s, now) === 'ended');
 
   // 一度でも参加した人（=メンバー）だけが過去の履歴を見られる
   const canSeeHistory = !!membership || isAdmin;
@@ -70,6 +72,8 @@ export function GroupPage({ groupId, uid, isAdmin, navigate }: Props) {
           membership={membership}
         />
       )}
+
+      {!membership && <GroupJoinForm group={group} onJoin={joinGroup} />}
 
       {/*
         開催されていない間は「ひとこと」が唯一のコミュニケーション手段なので、

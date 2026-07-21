@@ -295,6 +295,45 @@ a.session-item:hover {
   padding: 0.5rem 0.75rem;
 }
 
+/* 管理画面のセッション行：リンクと操作ボタンを横並びにする */
+.session-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.session-row .session-item {
+  flex: 1;
+  min-width: 0;
+}
+
+.session-row button {
+  flex-shrink: 0;
+}
+
+.join-card .description {
+  font-size: 0.9rem;
+  line-height: 1.8;
+  margin-bottom: 1.25rem;
+}
+
+.join-card .hint {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.join-card form {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.join-card input {
+  width: 100%;
+  max-width: 240px;
+}
+
 /* Countdown */
 .countdown-label {
   font-size: 0.9rem;

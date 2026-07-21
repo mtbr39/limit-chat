@@ -87,7 +87,8 @@ function AdminConsole({
   navigate,
 }: Pick<Props, 'uid' | 'signOutAdmin' | 'navigate'>) {
   const groups = useGroupList();
-  const { createGroup, createSession } = useGroupAdmin(uid);
+  const { createGroup, createSession, cancelSession, restoreSession } =
+    useGroupAdmin(uid);
   const [selectedGroupId, setSelectedGroupId] = useState<string>('');
 
   return (
@@ -128,6 +129,8 @@ function AdminConsole({
         <CreateSessionCard
           groupId={selectedGroupId}
           onCreate={createSession}
+          onCancel={cancelSession}
+          onRestore={restoreSession}
           navigate={navigate}
         />
       )}
@@ -214,6 +217,8 @@ function CreateGroupCard({
 function CreateSessionCard({
   groupId,
   onCreate,
+  onCancel,
+  onRestore,
   navigate,
 }: {
   groupId: string;
@@ -226,6 +231,8 @@ function CreateSessionCard({
       silenceLimitMs: number;
     }
   ) => Promise<string>;
+  onCancel: (groupId: string, sessionId: string) => Promise<void>;
+  onRestore: (groupId: string, sessionId: string) => Promise<void>;
   navigate: (to: string) => void;
 }) {
   const { sessions } = useGroup(groupId, null);
@@ -310,7 +317,7 @@ function CreateSessionCard({
       ) : (
         <ul className="session-list compact">
           {sessions.map((s) => (
-            <li key={s.id}>
+            <li key={s.id} className="session-row">
               <a
                 {...linkProps({
                   to: sessionPath(groupId, s.id),
@@ -322,7 +329,25 @@ function CreateSessionCard({
                 <span className="session-when">
                   {formatRange(s.startTime, s.endTime)}
                 </span>
+                {s.canceledAt && <span className="tag dead">キャンセル済み</span>}
               </a>
+              {s.canceledAt ? (
+                <button onClick={() => onRestore(groupId, s.id)}>戻す</button>
+              ) : (
+                <button
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        `「${s.title}」をキャンセルします。参加者には表示されなくなります。よろしいですか？`
+                      )
+                    ) {
+                      onCancel(groupId, s.id);
+                    }
+                  }}
+                >
+                  キャンセル
+                </button>
+              )}
             </li>
           ))}
         </ul>

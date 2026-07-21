@@ -30,8 +30,10 @@ export function SessionPage({ groupId, sessionId, uid, navigate }: Props) {
 
   // 開催中ならチャット会場であるグループトップへ送る
   useEffect(() => {
-    if (phase === 'live') navigate(groupPath(groupId));
-  }, [phase, groupId, navigate]);
+    if (phase === 'live' && session && !session.canceledAt) {
+      navigate(groupPath(groupId));
+    }
+  }, [phase, session, groupId, navigate]);
 
   if (loading) return <div className="loading">読み込み中...</div>;
 
@@ -48,6 +50,22 @@ export function SessionPage({ groupId, sessionId, uid, navigate }: Props) {
           <h2>セッションが見つかりません</h2>
           {backLink}
         </div>
+      </div>
+    );
+  }
+
+  if (session.canceledAt) {
+    return (
+      <div className="page">
+        <header>
+          <h1>{session.title}</h1>
+          <p className="subtitle">{formatRange(session.startTime, session.endTime)}</p>
+        </header>
+        <div className="card center">
+          <h2>この回はキャンセルされました</h2>
+          <p className="empty">開催は取りやめになりました。</p>
+        </div>
+        <footer className="page-footer">{backLink}</footer>
       </div>
     );
   }
