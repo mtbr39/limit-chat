@@ -1,5 +1,5 @@
 import { useAuth } from './hooks/useAuth';
-import { useRoute, linkProps } from './lib/router';
+import { useRoute } from './lib/router';
 import { HomePage } from './pages/HomePage';
 import { GroupPage } from './pages/GroupPage';
 import { SessionPage } from './pages/SessionPage';
@@ -15,7 +15,7 @@ function App() {
 
   switch (route.name) {
     case 'home':
-      return <HomePage navigate={navigate} isAdmin={isAdmin} />;
+      return <HomePage />;
 
     case 'admin':
       return (
@@ -51,11 +51,8 @@ function App() {
     default:
       return (
         <div className="page">
-          <div className="card">
+          <div className="card center">
             <h2>ページが見つかりません</h2>
-            <a {...linkProps({ to: '/', navigate, className: 'ghost-link' })}>
-              トップへ
-            </a>
           </div>
         </div>
       );

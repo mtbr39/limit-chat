@@ -25,10 +25,9 @@ export function GroupPage({ groupId, uid, isAdmin, navigate }: Props) {
   if (!group) {
     return (
       <div className="page">
-        <div className="card">
+        <div className="card center">
           <h2>グループが見つかりません</h2>
           <p className="empty">/{groupId} は存在しないか、削除されています。</p>
-          <a {...linkProps({ to: '/', navigate, className: 'ghost-link' })}>トップへ</a>
         </div>
       </div>
     );
@@ -125,15 +124,6 @@ export function GroupPage({ groupId, uid, isAdmin, navigate }: Props) {
           <ul className="session-list">{past.map((s) => sessionRow(s))}</ul>
         )}
       </section>
-
-      <footer className="page-footer">
-        <a {...linkProps({ to: '/', navigate, className: 'ghost-link' })}>トップへ</a>
-        {isAdmin && (
-          <a {...linkProps({ to: '/admin', navigate, className: 'ghost-link' })}>
-            管理画面
-          </a>
-        )}
-      </footer>
     </div>
   );
 }

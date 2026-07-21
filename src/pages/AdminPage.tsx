@@ -25,15 +25,12 @@ export function AdminPage({
   navigate,
 }: Props) {
   if (!isAdmin) {
-    return <LoginCard signInAsAdmin={signInAsAdmin} navigate={navigate} />;
+    return <LoginCard signInAsAdmin={signInAsAdmin} />;
   }
   return <AdminConsole uid={uid} signOutAdmin={signOutAdmin} navigate={navigate} />;
 }
 
-function LoginCard({
-  signInAsAdmin,
-  navigate,
-}: Pick<Props, 'signInAsAdmin' | 'navigate'>) {
+function LoginCard({ signInAsAdmin }: Pick<Props, 'signInAsAdmin'>) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -80,9 +77,6 @@ function LoginCard({
           </button>
         </form>
       </div>
-      <footer className="page-footer">
-        <a {...linkProps({ to: '/', navigate, className: 'ghost-link' })}>トップへ</a>
-      </footer>
     </div>
   );
 }
@@ -139,7 +133,6 @@ function AdminConsole({
       )}
 
       <footer className="page-footer">
-        <a {...linkProps({ to: '/', navigate, className: 'ghost-link' })}>トップへ</a>
         <button className="ghost-link" onClick={signOutAdmin}>
           ログアウト
         </button>
