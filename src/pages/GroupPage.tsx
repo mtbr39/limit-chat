@@ -63,14 +63,27 @@ export function GroupPage({ groupId, uid, isAdmin, navigate }: Props) {
         <p className="group-url">/{group.id}</p>
       </header>
 
-      {liveSession ? (
+      {liveSession && (
         <LiveSession
           groupId={group.id}
           session={liveSession}
           uid={uid}
           membership={membership}
         />
-      ) : (
+      )}
+
+      {/*
+        開催されていない間は「ひとこと」が唯一のコミュニケーション手段なので、
+        メンバー一覧をメインコンテンツとして先頭に置く。
+      */}
+      <MemberList
+        members={members}
+        currentUserId={uid}
+        isMember={!!membership}
+        onUpdateNote={updateNote}
+      />
+
+      {!liveSession && (
         <section className="card center">
           <h2>いまは開催されていません</h2>
           {upcoming.length > 0 ? (
@@ -99,13 +112,6 @@ export function GroupPage({ groupId, uid, isAdmin, navigate }: Props) {
           </ul>
         </section>
       )}
-
-      <MemberList
-        members={members}
-        currentUserId={uid}
-        isMember={!!membership}
-        onUpdateNote={updateNote}
-      />
 
       <section className="card">
         <h2>過去のセッション</h2>
