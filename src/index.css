@@ -308,6 +308,145 @@ header .subtitle {
   cursor: not-allowed;
 }
 
+/* Live session heading */
+.live-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+.live-heading h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.05rem;
+}
+
+.live-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #ef4444;
+  box-shadow: 0 0 8px #ef4444;
+  animation: pulse 1.4s infinite;
+}
+
+.live-meta {
+  font-size: 0.82rem;
+  color: #8b90a5;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Members */
+.member-list {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.5rem;
+}
+
+.member {
+  padding: 0.7rem 0.85rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+}
+
+.member.me {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.member-head {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.25rem;
+}
+
+.member-name {
+  font-weight: bold;
+  font-size: 0.92rem;
+}
+
+.member-note {
+  font-size: 0.82rem;
+  color: #c7cbd9;
+  word-break: break-word;
+}
+
+.member-note.empty {
+  color: #5f6579;
+  font-style: italic;
+}
+
+.note-editor {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.85rem;
+}
+
+.note-editor input {
+  flex: 1;
+  padding: 0.6rem 0.8rem;
+  border: none;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-size: 0.9rem;
+}
+
+.note-editor button[type='submit'] {
+  padding: 0.6rem 1.1rem;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #ff6b6b, #feca57);
+  color: #000;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.member-note-time {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  margin-top: 0.3rem;
+  font-size: 0.72rem;
+  color: #6f7690;
+}
+
+.member-note-time .relative {
+  color: #8b90a5;
+}
+
+.member-note-time .absolute::before {
+  content: '・';
+  margin-right: 0.2rem;
+}
+
+.note-edit-trigger {
+  margin-top: 1rem;
+  width: 100%;
+  padding: 0.75rem 1.2rem;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(90deg, #ff6b6b, #feca57);
+  color: #000;
+  font-size: 0.95rem;
+  font-weight: bold;
+  font-family: inherit;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+  box-shadow: 0 2px 12px rgba(255, 107, 107, 0.25);
+}
+
+.note-edit-trigger:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 18px rgba(255, 107, 107, 0.4);
+}
+
 /* Main layout */
 .main-content {
   display: grid;

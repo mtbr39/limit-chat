@@ -132,6 +132,37 @@ export function formatRange(startTime: number, endTime: number): string {
     : `${date} ${time(start)} 〜 ${end.toLocaleString('ja-JP')}`;
 }
 
+/** 「7月21日 14:32」のような絶対表記 */
+export function formatDateTime(timestamp: number): string {
+  return new Date(timestamp).toLocaleString('ja-JP', {
+    month: 'numeric',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+/** 「3分前」のような相対表記。1日以上前は日付にする */
+export function formatTimeAgo(timestamp: number, now: number): string {
+  const diff = now - timestamp;
+  if (diff < 60 * 1000) return 'たった今';
+
+  const minutes = Math.floor(diff / (60 * 1000));
+  if (minutes < 60) return `${minutes}分前`;
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}時間前`;
+
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}日前`;
+
+  return new Date(timestamp).toLocaleDateString('ja-JP', {
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+  });
+}
+
 export function formatDuration(ms: number): string {
   const total = Math.max(0, Math.ceil(ms / 1000));
   const h = Math.floor(total / 3600);

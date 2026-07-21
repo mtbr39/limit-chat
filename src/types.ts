@@ -39,4 +39,7 @@ export interface Membership {
   id: string;
   name: string;
   joinedAt: number;
+  /** プロフィールのひとこと */
+  note: string;
+  noteUpdatedAt: number | null;
 }

@@ -93,9 +93,17 @@ export function useSession(
         await setDoc(participantRef, participant);
       }
 
-      // グループの履歴を見られるようにメンバーとして記録する
+      // グループの履歴を見られるようにメンバーとして記録する。
+      // note は本人が編集するので、初回作成時だけ初期化する。
       const memberRef = doc(db, 'groups', groupId!, 'members', uid);
-      await setDoc(memberRef, { name, joinedAt: now }, { merge: true });
+      const existingMember = await getDoc(memberRef);
+      await setDoc(
+        memberRef,
+        existingMember.exists()
+          ? { name }
+          : { name, joinedAt: now, note: '', noteUpdatedAt: null },
+        { merge: true }
+      );
     },
     [groupId, sessionId, uid, ready]
   );

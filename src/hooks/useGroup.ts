@@ -3,6 +3,7 @@ import {
   doc,
   setDoc,
   getDoc,
+  getDocs,
   onSnapshot,
   collection,
   query,
@@ -12,11 +13,11 @@ import { db } from '../firebase';
 import { Group, Session, Membership } from '../types';
 import { RESERVED_SLUGS } from '../lib/router';
 
-/** グループ本体・セッション一覧・自分のメンバーシップを購読する */
+/** グループ本体・セッション一覧・メンバー一覧を購読する */
 export function useGroup(groupId: string | null, uid: string | null) {
   const [group, setGroup] = useState<Group | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
-  const [membership, setMembership] = useState<Membership | null>(null);
+  const [members, setMembers] = useState<Membership[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -49,18 +50,35 @@ export function useGroup(groupId: string | null, uid: string | null) {
   }, [groupId]);
 
   useEffect(() => {
-    if (!groupId || !uid) {
-      setMembership(null);
+    if (!groupId) {
+      setMembers([]);
       return;
     }
-    return onSnapshot(doc(db, 'groups', groupId, 'members', uid), (snap) => {
-      setMembership(
-        snap.exists() ? ({ id: snap.id, ...snap.data() } as Membership) : null
-      );
+    const q = query(
+      collection(db, 'groups', groupId, 'members'),
+      orderBy('joinedAt', 'asc')
+    );
+    return onSnapshot(q, (snap) => {
+      setMembers(snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Membership));
     });
-  }, [groupId, uid]);
+  }, [groupId]);
 
-  return { group, sessions, membership, loading };
+  const membership = members.find((m) => m.id === uid) ?? null;
+
+  /** 自分のひとことを更新する */
+  const updateNote = useCallback(
+    async (note: string) => {
+      if (!groupId || !uid) return;
+      await setDoc(
+        doc(db, 'groups', groupId, 'members', uid),
+        { note, noteUpdatedAt: Date.now() },
+        { merge: true }
+      );
+    },
+    [groupId, uid]
+  );
+
+  return { group, sessions, members, membership, loading, updateNote };
 }
 
 /** トップページ用のグループ一覧 */
@@ -125,6 +143,20 @@ export function useGroupAdmin(uid: string | null) {
       if (input.endTime <= input.startTime) {
         throw new Error('終了時間は開始時間より後にしてください');
       }
+
+      // 同時に複数のセッションは開催しない（チャット会場はグループトップの1つだけ）
+      const existing = await getDocs(collection(db, 'groups', groupId, 'sessions'));
+      const conflict = existing.docs
+        .map((d) => d.data() as Omit<Session, 'id'>)
+        .find((s) => input.startTime < s.endTime && s.startTime < input.endTime);
+      if (conflict) {
+        throw new Error(
+          `「${conflict.title}」と時間が重なっています（${new Date(
+            conflict.startTime
+          ).toLocaleString('ja-JP')} 〜）`
+        );
+      }
+
       const ref = doc(collection(db, 'groups', groupId, 'sessions'));
       const session: Omit<Session, 'id'> = {
         ...input,
