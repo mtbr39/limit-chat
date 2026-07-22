@@ -15,8 +15,16 @@ interface Props {
 }
 
 export function GroupPage({ groupId, uid, isAdmin, navigate }: Props) {
-  const { group, sessions, members, membership, loading, joinGroup, updateNote } =
-    useGroup(groupId, uid);
+  const {
+    group,
+    sessions,
+    members,
+    membership,
+    loading,
+    joinGroup,
+    updateNote,
+    updateName,
+  } = useGroup(groupId, uid);
   const now = useNow(1000);
 
   if (loading) return <div className="loading">読み込み中...</div>;
@@ -84,6 +92,7 @@ export function GroupPage({ groupId, uid, isAdmin, navigate }: Props) {
         currentUserId={uid}
         isMember={!!membership}
         onUpdateNote={updateNote}
+        onUpdateName={updateName}
       />
 
       {!liveSession && (

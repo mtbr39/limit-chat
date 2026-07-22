@@ -1,7 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { useSession } from '../hooks/useSession';
 import { useNow } from '../hooks/useNow';
-import { EntryForm } from './EntryForm';
 import { ChatRoom } from './ChatRoom';
 import { ParticipantList } from './ParticipantList';
 import { Session, Membership } from '../types';
@@ -22,26 +21,25 @@ export function LiveSession({ groupId, session, uid, membership }: Props) {
     uid
   );
   const now = useNow(1000);
-  const [isJoining, setIsJoining] = useState(false);
+  const joinAttempted = useRef(false);
 
-  const handleJoin = async (name: string) => {
-    setIsJoining(true);
-    try {
-      await join(name);
-    } finally {
-      setIsJoining(false);
+  // グループに参加済み（名前がある）なら、チャット開始時に自動で参加者になる。
+  // 名前はグループページの参加フォームで登録済みのものを使うので、ここでは訊かない。
+  useEffect(() => {
+    if (!me && membership && !joinAttempted.current) {
+      joinAttempted.current = true;
+      join(membership.name).catch(() => {
+        joinAttempted.current = false;
+      });
     }
-  };
+  }, [me, membership, join]);
+
+  // まだグループに参加していない人には、下のグループ参加フォームで
+  // 名前を登録してもらう。ここではチャットを出さない。
+  if (!membership) return null;
 
   if (!me) {
-    return (
-      <EntryForm
-        session={session}
-        onSubmit={handleJoin}
-        isLoading={isJoining}
-        defaultName={membership?.name}
-      />
-    );
+    return <div className="loading">チャットに参加しています...</div>;
   }
 
   const state = evaluate(me, session, now);

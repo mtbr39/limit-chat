@@ -311,6 +311,19 @@ a.session-item:hover {
   flex-shrink: 0;
 }
 
+/* 編集中はフォームを縦に並べたいので flex をやめる */
+.session-row.editing {
+  display: block;
+  padding: 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--mine);
+}
+
+.session-row.editing .form-row button {
+  flex: 1;
+}
+
 .join-card .description {
   font-size: 0.9rem;
   line-height: 1.8;
@@ -510,6 +523,30 @@ a.session-item:hover {
   font-weight: bold;
 }
 
+/* 名前の横の小さな鉛筆ボタン。押しても縮まないよう padding を固定する */
+.name-edit-trigger {
+  padding: 0.15em 0.4em;
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.name-edit-trigger:active:not(:disabled) {
+  padding: 0.15em 0.4em;
+}
+
+.name-editor {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.name-editor input {
+  flex: 1;
+  min-width: 140px;
+}
+
 /* ひとことは吹き出し。しっぽは枠線ぶんずらした三角形を2枚重ねて作る */
 .member-note {
   position: relative;
@@ -602,6 +639,12 @@ a.session-item:hover {
 
 .note-edit-trigger:hover:not(:disabled) {
   background: #ffe566;
+}
+
+/* 押し込み時、共通の button:active が padding をベース値に戻して
+   ボタンが一瞬縮むので、このボタン用のサイズを保ったまま押し込む */
+.note-edit-trigger:active:not(:disabled) {
+  padding: calc(0.55em + 1px) calc(1.5em - 1px) calc(0.55em - 1px) calc(1.5em + 1px);
 }
 
 /* Main layout */

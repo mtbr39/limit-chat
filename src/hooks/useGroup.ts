@@ -13,6 +13,7 @@ import {
 import { db } from '../firebase';
 import { Group, Session, Membership } from '../types';
 import { RESERVED_SLUGS } from '../lib/router';
+import { sessionPhase } from '../lib/survival';
 
 /** グループ本体・セッション一覧・メンバー一覧を購読する */
 export function useGroup(groupId: string | null, uid: string | null) {
@@ -99,7 +100,49 @@ export function useGroup(groupId: string | null, uid: string | null) {
     [groupId, uid]
   );
 
-  return { group, sessions, members, membership, loading, joinGroup, updateNote };
+  /** 自分の表示名を更新する。開催中セッションの参加者名もその場で同期する */
+  const updateName = useCallback(
+    async (name: string) => {
+      if (!groupId || !uid) return;
+      await setDoc(
+        doc(db, 'groups', groupId, 'members', uid),
+        { name },
+        { merge: true }
+      );
+
+      // いま開催中のセッションに参加していれば、その参加者名も更新する。
+      // 過去・未来のセッションは記録なので触らない。
+      const live = sessions.find(
+        (s) => !s.canceledAt && sessionPhase(s, Date.now()) === 'live'
+      );
+      if (live) {
+        const participantRef = doc(
+          db,
+          'groups',
+          groupId,
+          'sessions',
+          live.id,
+          'participants',
+          uid
+        );
+        if ((await getDoc(participantRef)).exists()) {
+          await updateDoc(participantRef, { name });
+        }
+      }
+    },
+    [groupId, uid, sessions]
+  );
+
+  return {
+    group,
+    sessions,
+    members,
+    membership,
+    loading,
+    joinGroup,
+    updateNote,
+    updateName,
+  };
 }
 
 /** トップページ用のグループ一覧 */
@@ -150,6 +193,21 @@ export function useGroupAdmin(uid: string | null) {
     [uid]
   );
 
+  const updateGroup = useCallback(
+    async (
+      groupId: string,
+      input: { name: string; description: string }
+    ) => {
+      if (!uid) throw new Error('ログインが必要です');
+      if (!input.name.trim()) throw new Error('グループ名を入力してください');
+      await updateDoc(doc(db, 'groups', groupId), {
+        name: input.name.trim(),
+        description: input.description.trim(),
+      });
+    },
+    [uid]
+  );
+
   const createSession = useCallback(
     async (
       groupId: string,
@@ -191,6 +249,47 @@ export function useGroupAdmin(uid: string | null) {
     [uid]
   );
 
+  const updateSession = useCallback(
+    async (
+      groupId: string,
+      sessionId: string,
+      input: {
+        title: string;
+        startTime: number;
+        endTime: number;
+        silenceLimitMs: number;
+      }
+    ) => {
+      if (!uid) throw new Error('ログインが必要です');
+      if (input.endTime <= input.startTime) {
+        throw new Error('終了時間は開始時間より後にしてください');
+      }
+
+      // 自分自身を除いて、他のセッションと時間が重ならないか確認する
+      const existing = await getDocs(collection(db, 'groups', groupId, 'sessions'));
+      const conflict = existing.docs
+        .filter((d) => d.id !== sessionId)
+        .map((d) => d.data() as Omit<Session, 'id'>)
+        .filter((s) => !s.canceledAt)
+        .find((s) => input.startTime < s.endTime && s.startTime < input.endTime);
+      if (conflict) {
+        throw new Error(
+          `「${conflict.title}」と時間が重なっています（${new Date(
+            conflict.startTime
+          ).toLocaleString('ja-JP')} 〜）`
+        );
+      }
+
+      await updateDoc(doc(db, 'groups', groupId, 'sessions', sessionId), {
+        title: input.title,
+        startTime: input.startTime,
+        endTime: input.endTime,
+        silenceLimitMs: input.silenceLimitMs,
+      });
+    },
+    [uid]
+  );
+
   /**
    * セッションを中止する。ドキュメントは消さずに印を付けるだけにして、
    * すでに残っている発言や参加記録を失わないようにする。
@@ -213,5 +312,12 @@ export function useGroupAdmin(uid: string | null) {
     []
   );
 
-  return { createGroup, createSession, cancelSession, restoreSession };
+  return {
+    createGroup,
+    updateGroup,
+    createSession,
+    updateSession,
+    cancelSession,
+    restoreSession,
+  };
 }

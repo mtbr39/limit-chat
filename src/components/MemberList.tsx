@@ -8,19 +8,31 @@ interface Props {
   currentUserId: string | null;
   isMember: boolean;
   onUpdateNote: (note: string) => Promise<void>;
+  onUpdateName: (name: string) => Promise<void>;
 }
 
-const MAX_NOTE = 60;
+const MAX_NOTE = 240;
+const MAX_NAME = 20;
 
-export function MemberList({ members, currentUserId, isMember, onUpdateNote }: Props) {
+export function MemberList({
+  members,
+  currentUserId,
+  isMember,
+  onUpdateNote,
+  onUpdateName,
+}: Props) {
   const me = members.find((m) => m.id === currentUserId) ?? null;
   const now = useNow(30 * 1000);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
 
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState('');
+  const [nameBusy, setNameBusy] = useState(false);
+
   const startEditing = () => {
-    setDraft(me?.note ?? '');
+    setDraft('');
     setEditing(true);
   };
 
@@ -35,6 +47,24 @@ export function MemberList({ members, currentUserId, isMember, onUpdateNote }: P
     }
   };
 
+  const startEditingName = () => {
+    setNameDraft(me?.name ?? '');
+    setEditingName(true);
+  };
+
+  const saveName = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const next = nameDraft.trim().slice(0, MAX_NAME);
+    if (!next) return;
+    setNameBusy(true);
+    try {
+      await onUpdateName(next);
+      setEditingName(false);
+    } finally {
+      setNameBusy(false);
+    }
+  };
+
   return (
     <section className="card">
       <h2>メンバー {members.length}人</h2>
@@ -46,8 +76,44 @@ export function MemberList({ members, currentUserId, isMember, onUpdateNote }: P
           {members.map((m) => (
             <li key={m.id} className={m.id === currentUserId ? 'member me' : 'member'}>
               <div className="member-head">
-                <span className="member-name">{m.name}</span>
-                {m.id === currentUserId && <span className="me-badge">あなた</span>}
+                {m.id === currentUserId && editingName ? (
+                  <form className="name-editor" onSubmit={saveName}>
+                    <input
+                      value={nameDraft}
+                      onChange={(e) => setNameDraft(e.target.value)}
+                      placeholder="名前"
+                      maxLength={MAX_NAME}
+                      autoFocus
+                    />
+                    <button type="submit" disabled={nameBusy || !nameDraft.trim()}>
+                      {nameBusy ? '保存中...' : '保存'}
+                    </button>
+                    <button
+                      type="button"
+                      className="ghost-link"
+                      onClick={() => setEditingName(false)}
+                    >
+                      キャンセル
+                    </button>
+                  </form>
+                ) : (
+                  <>
+                    <span className="member-name">{m.name}</span>
+                    {m.id === currentUserId && (
+                      <>
+                        <span className="me-badge">あなた</span>
+                        <button
+                          type="button"
+                          className="name-edit-trigger"
+                          onClick={startEditingName}
+                          aria-label="名前を編集"
+                        >
+                          ✏️
+                        </button>
+                      </>
+                    )}
+                  </>
+                )}
               </div>
               {m.note ? (
                 <>
