@@ -2,6 +2,13 @@ import { useState, useEffect, useRef } from 'react';
 import { Message, Participant, Session } from '../types';
 import { SurvivalState, canSpeak, formatDuration } from '../lib/survival';
 
+function formatTime(ts: number): string {
+  const d = new Date(ts);
+  const h = String(d.getHours()).padStart(2, '0');
+  const m = String(d.getMinutes()).padStart(2, '0');
+  return `${h}:${m}`;
+}
+
 interface Props {
   messages: Message[];
   me: Participant | null;
@@ -13,10 +20,15 @@ interface Props {
 
 export function ChatRoom({ messages, me, session, state, now, onSendMessage }: Props) {
   const [text, setText] = useState('');
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesRef = useRef<HTMLDivElement>(null);
 
+  // scrollIntoView だとページ全体まで動いてしまうので、
+  // メッセージ一覧のコンテナ内部だけをスクロールする
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const el = messagesRef.current;
+    if (el) {
+      el.scrollTop = el.scrollHeight;
+    }
   }, [messages]);
 
   const speakable = canSpeak(state);
@@ -85,20 +97,22 @@ export function ChatRoom({ messages, me, session, state, now, onSendMessage }: P
         </div>
       )}
 
-      <div className="messages">
+      <div className="messages" ref={messagesRef}>
         {messages.map((msg) => (
           <div
             key={msg.id}
             className={`message ${msg.userId === me?.id ? 'mine' : ''}`}
           >
-            <span className="sender">{msg.userName}</span>
+            <span className="message-meta">
+              <span className="sender">{msg.userName}</span>
+              <span className="time">{formatTime(msg.createdAt)}</span>
+            </span>
             <span className="text">{msg.text}</span>
           </div>
         ))}
         {messages.length === 0 && (
           <p className="empty">まだ発言がありません</p>
         )}
-        <div ref={messagesEndRef} />
       </div>
 
       <form onSubmit={handleSubmit} className="message-form">

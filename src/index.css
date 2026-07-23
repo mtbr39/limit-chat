@@ -819,6 +819,8 @@ a.session-item:hover {
   border-radius: var(--radius);
   background: #fff;
   overflow: hidden;
+  /* 高さを固定し、メッセージが増えてもウィンドウ内部でスクロールさせる */
+  height: 70vh;
   min-height: 420px;
   min-width: 0;
 }
@@ -827,6 +829,7 @@ a.session-item:hover {
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-height: 0;
 }
 
 .timer {
@@ -908,9 +911,20 @@ a.session-item:hover {
   background: var(--panel);
 }
 
-.message .sender {
+.message .message-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
   font-size: 0.72rem;
+}
+
+.message .sender {
   color: var(--muted);
+}
+
+.message .time {
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
 }
 
 .message .text {
@@ -994,6 +1008,7 @@ a.ghost-link {
   }
 
   .chat-area {
+    height: 70vh;
     min-height: 60vh;
   }
 
