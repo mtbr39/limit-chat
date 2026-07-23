@@ -10,6 +10,7 @@ import {
   evaluate,
   formatDuration,
 } from '../lib/survival';
+import { notify } from '../lib/notify';
 
 interface Props {
   groupId: string;
@@ -27,6 +28,20 @@ export function LiveSession({ groupId, session, uid, membership }: Props) {
   );
   const now = useNow(1000);
   const joinAttempted = useRef(false);
+
+  // チャットメッセージの通知。このタブを見ているときは通知しない。
+  // 開いた時点より前のメッセージ（リロード時の履歴）も通知しない。
+  const watchStart = useRef(Date.now());
+  const seenMessages = useRef(new Set<string>());
+  useEffect(() => {
+    for (const msg of messages) {
+      if (seenMessages.current.has(msg.id)) continue;
+      seenMessages.current.add(msg.id);
+      if (msg.userId === uid) continue;
+      if (msg.createdAt <= watchStart.current) continue;
+      notify(msg.userName, msg.text, { onlyWhenHidden: true, tag: 'chat' });
+    }
+  }, [messages, uid]);
 
   // グループに参加済み（名前がある）なら、チャット開始時に自動で参加者になる。
   // 名前はグループページの参加フォームで登録済みのものを使うので、ここでは訊かない。

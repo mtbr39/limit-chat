@@ -169,6 +169,15 @@ header .subtitle {
   margin-top: 0.25rem;
 }
 
+.notify-toggle {
+  margin-top: 0.4rem;
+  font-size: 0.82rem;
+}
+
+.notify-toggle.denied {
+  color: var(--faint);
+}
+
 .group-url {
   font-family: ui-monospace, 'Courier New', monospace;
   font-size: 0.8rem;
