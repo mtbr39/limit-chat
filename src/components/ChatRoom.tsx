@@ -62,7 +62,9 @@ export function ChatRoom({ messages, me, session, state, now, onSendMessage }: P
     <div className="chat-room">
       {state.status === 'grace' && (
         <div className="banner grace">
-          まだ沈黙タイマーは動いていません。最初の発言をするとカウントが始まります。
+          {me?.firstMessageAt == null
+            ? 'まだ沈黙タイマーは動いていません。60秒以内にお互いが発言し合う（会話が成立する）とカウントが始まります。'
+            : '発言に誰かが60秒以内に反応する（会話が成立する）と沈黙タイマーが始まります。'}
         </div>
       )}
 

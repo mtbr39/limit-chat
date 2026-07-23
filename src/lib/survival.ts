@@ -1,9 +1,12 @@
-import { Participant, Session } from '../types';
+import { Message, Participant, Session } from '../types';
+
+/** この時間以内にお互いが発言すると「会話が成立」してタイマーが動き出す */
+export const REPLY_WINDOW_MS = 60_000;
 
 export type SurvivalStatus =
   /** セッション開始前 */
   | 'waiting'
-  /** 参加済みだがまだ一度も発言していない（この間は脱落しない） */
+  /** まだ会話が成立していない（この間は脱落しない） */
   | 'grace'
   /** 発言済みで沈黙タイマー進行中 */
   | 'alive'
@@ -22,6 +25,41 @@ export interface SurvivalState {
   eliminatedAt: number | null;
 }
 
+/**
+ * 各参加者の沈黙タイマー開始時刻を求める。
+ * 自分の発言と他人の発言が REPLY_WINDOW_MS 以内に交わされた
+ * （＝会話が成立した）時点で、その両者のタイマーが動き出す。
+ * 一方的に発言しても誰も反応しなければタイマーは始まらない。
+ * messages は createdAt 昇順であること。
+ */
+export function computeTimerStarts(messages: Message[]): Map<string, number> {
+  const starts = new Map<string, number>();
+
+  for (let i = 0; i < messages.length; i++) {
+    const msg = messages[i];
+    // 60秒以内にある「他人の」発言を過去にさかのぼって探す
+    for (let j = i - 1; j >= 0; j--) {
+      const prev = messages[j];
+      if (msg.createdAt - prev.createdAt > REPLY_WINDOW_MS) break;
+      if (prev.userId === msg.userId) continue;
+      // 会話成立。返信された時刻を開始時刻として両者に記録する
+      if (!starts.has(prev.userId)) starts.set(prev.userId, msg.createdAt);
+      if (!starts.has(msg.userId)) starts.set(msg.userId, msg.createdAt);
+    }
+  }
+
+  return starts;
+}
+
+/** ユーザーごとの発言数。チャット中の表示と結果の順位付けに使う */
+export function countMessages(messages: Message[]): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const m of messages) {
+    counts.set(m.userId, (counts.get(m.userId) ?? 0) + 1);
+  }
+  return counts;
+}
+
 export function sessionPhase(
   session: Session,
   now: number
@@ -32,13 +70,15 @@ export function sessionPhase(
 }
 
 /**
- * 参加者の状態を lastMessageAt から導出する。
+ * 参加者の状態をメッセージ履歴から導出する。
  * DB に脱落フラグを書かないので、過去セッションでも同じ関数で正しい結果が出る。
+ * timerStartedAt は computeTimerStarts で求めた会話成立時刻（未成立なら undefined/null）。
  */
 export function evaluate(
   participant: Participant,
   session: Session,
-  now: number
+  now: number,
+  timerStartedAt: number | null | undefined
 ): SurvivalState {
   const phase = sessionPhase(session, now);
 
@@ -55,7 +95,19 @@ export function evaluate(
     };
   }
 
-  const deadline = participant.lastMessageAt + session.silenceLimitMs;
+  // 発言済みでも、誰とも会話が成立していなければタイマーは動かず脱落しない
+  if (timerStartedAt == null) {
+    return {
+      status: phase === 'ended' ? 'survived' : 'grace',
+      deadline: null,
+      eliminatedAt: null,
+    };
+  }
+
+  // 相手の返信で会話が成立した場合、自分の発言はそれより前のことがあるので、
+  // カウントは成立時刻と最終発言の遅いほうから始める
+  const deadline =
+    Math.max(participant.lastMessageAt, timerStartedAt) + session.silenceLimitMs;
 
   // 期限が終了時刻を過ぎているなら、沈黙のまま終了時刻を迎えたので脱落ではない
   if (deadline > session.endTime) {
@@ -91,7 +143,8 @@ export interface SessionOutcome {
 export function summarize(
   participants: Participant[],
   session: Session,
-  now: number
+  now: number,
+  timerStarts: Map<string, number>
 ): SessionOutcome {
   const outcome: SessionOutcome = {
     survivors: [],
@@ -101,7 +154,7 @@ export function summarize(
   };
 
   for (const p of participants) {
-    const { status } = evaluate(p, session, now);
+    const { status } = evaluate(p, session, now, timerStarts.get(p.id));
     if (status === 'eliminated') outcome.eliminated.push(p);
     else if (status === 'silent') outcome.silent.push(p);
     else if (status === 'waiting') outcome.waiting.push(p);

@@ -747,6 +747,72 @@ a.session-item:hover {
   font-variant-numeric: tabular-nums;
 }
 
+/* 発言数バッジ。数が増えると key が変わって作り直され、pop が再生される */
+.msg-count {
+  position: relative;
+  display: inline-block;
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.msg-count.pop {
+  animation: count-pop 0.7s cubic-bezier(0.2, 1.6, 0.4, 1);
+}
+
+/* 飛び出す「+1」 */
+.msg-count.pop::after {
+  content: '+1';
+  position: absolute;
+  left: 50%;
+  bottom: 90%;
+  font-size: 1rem;
+  font-weight: bold;
+  color: var(--danger);
+  text-shadow:
+    0 0 8px #ffd700,
+    0 0 2px #fff;
+  pointer-events: none;
+  animation: plus-one 0.9s ease-out forwards;
+}
+
+@keyframes count-pop {
+  0% {
+    transform: scale(3);
+    color: var(--danger);
+    text-shadow: 0 0 12px #ffd700, 0 0 4px #ff8c00;
+  }
+  50% {
+    transform: scale(0.85);
+  }
+  75% {
+    transform: scale(1.25);
+    color: var(--danger);
+  }
+  100% {
+    transform: scale(1);
+    color: var(--muted);
+    text-shadow: none;
+  }
+}
+
+@keyframes plus-one {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 0.4em) scale(0.5);
+  }
+  15% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1.4);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -1.8em) scale(1);
+  }
+}
+
 .remaining.danger {
   color: var(--danger);
   font-weight: bold;
@@ -802,6 +868,24 @@ a.session-item:hover {
   padding: 0.3rem 0.45rem;
   border: 1px solid var(--rule);
   border-radius: 6px;
+}
+
+.result-block .rank {
+  font-family: ui-monospace, 'Courier New', monospace;
+  font-size: 0.78rem;
+  font-weight: bold;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.result-block li.survived .rank {
+  color: var(--alive);
+}
+
+.result-block li.dead {
+  color: var(--faint);
+  background: var(--panel);
 }
 
 .result-block .detail {
@@ -992,11 +1076,14 @@ a.ghost-link {
     grid-template-columns: 1fr;
   }
 
-  /* 参加者リストは横スクロールにして、チャットに縦幅を譲る */
+  /* 参加者リストは横スクロールにして、チャットに縦幅を譲る。
+     overflow-x: auto は縦も切るので、飛び出す「+1」用に上へ余白を取る */
   .sidebar .participants {
     flex-direction: row;
     overflow-x: auto;
+    padding-top: 1.3rem;
     padding-bottom: 0.25rem;
+    margin-top: -0.7rem;
   }
 
   .sidebar .participant {

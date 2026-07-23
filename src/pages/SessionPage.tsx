@@ -104,6 +104,7 @@ export function SessionPage({ groupId, sessionId, uid, navigate }: Props) {
           <SessionResult
             participants={participants}
             session={session}
+            messages={messages}
             now={now}
             currentUserId={uid}
           />

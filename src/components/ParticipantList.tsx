@@ -6,21 +6,34 @@ interface Props {
   session: Session;
   now: number;
   currentUserId: string | null;
+  /** 会話成立によるタイマー開始時刻（computeTimerStarts の結果） */
+  timerStarts: Map<string, number>;
+  /** ユーザーごとの発言数（countMessages の結果） */
+  messageCounts: Map<string, number>;
 }
 
-export function ParticipantList({ participants, session, now, currentUserId }: Props) {
+export function ParticipantList({
+  participants,
+  session,
+  now,
+  currentUserId,
+  timerStarts,
+  messageCounts,
+}: Props) {
   const { survivors, eliminated, silent, waiting } = summarize(
     participants,
     session,
-    now
+    now,
+    timerStarts
   );
 
   const row = (p: Participant, kind: string, badge?: string) => {
-    const state = evaluate(p, session, now);
+    const state = evaluate(p, session, now, timerStarts.get(p.id));
     const remaining =
       state.status === 'alive' && state.deadline !== null
         ? state.deadline - now
         : null;
+    const count = messageCounts.get(p.id) ?? 0;
 
     return (
       <div
@@ -30,6 +43,10 @@ export function ParticipantList({ participants, session, now, currentUserId }: P
         <span className={`status-dot ${kind}`} />
         <span className="name">{p.name}</span>
         {p.id === currentUserId && <span className="me-badge">あなた</span>}
+        {/* key に発言数を使い、増えるたびに要素を作り直してポップさせる */}
+        <span key={count} className={`msg-count ${count > 0 ? 'pop' : ''}`}>
+          💬{count}
+        </span>
         {remaining !== null && (
           <span className={`remaining ${remaining < 15000 ? 'danger' : ''}`}>
             {formatDuration(remaining)}
@@ -52,7 +69,9 @@ export function ParticipantList({ participants, session, now, currentUserId }: P
           row(
             p,
             'alive',
-            evaluate(p, session, now).status === 'grace' ? '未発言' : undefined
+            evaluate(p, session, now, timerStarts.get(p.id)).status === 'grace'
+              ? '会話待ち'
+              : undefined
           )
         )}
         {silent.map((p) => row(p, 'silent', '未発言'))}

@@ -4,7 +4,12 @@ import { useNow } from '../hooks/useNow';
 import { ChatRoom } from './ChatRoom';
 import { ParticipantList } from './ParticipantList';
 import { Session, Membership } from '../types';
-import { evaluate, formatDuration } from '../lib/survival';
+import {
+  computeTimerStarts,
+  countMessages,
+  evaluate,
+  formatDuration,
+} from '../lib/survival';
 
 interface Props {
   groupId: string;
@@ -42,7 +47,9 @@ export function LiveSession({ groupId, session, uid, membership }: Props) {
     return <div className="loading">チャットに参加しています...</div>;
   }
 
-  const state = evaluate(me, session, now);
+  const timerStarts = computeTimerStarts(messages);
+  const messageCounts = countMessages(messages);
+  const state = evaluate(me, session, now, timerStarts.get(me.id));
 
   return (
     <>
@@ -64,6 +71,8 @@ export function LiveSession({ groupId, session, uid, membership }: Props) {
             session={session}
             now={now}
             currentUserId={uid}
+            timerStarts={timerStarts}
+            messageCounts={messageCounts}
           />
         </aside>
 
