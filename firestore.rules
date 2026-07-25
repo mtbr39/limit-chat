@@ -24,6 +24,26 @@ service cloud.firestore {
         allow write: if isSignedIn() && request.auth.uid == uid;
       }
 
+      // 常時チャットの発言。自分の uid でしか投稿できず、後から書き換えられない。
+      match /chat/{messageId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn()
+          && request.resource.data.userId == request.auth.uid;
+        allow update, delete: if false;
+      }
+
+      // 発言のあった日を記録する日別ログ索引（軽い集計）。誰の発言でも更新される。
+      match /chatDays/{dayKey} {
+        allow read: if isSignedIn();
+        allow write: if isSignedIn();
+      }
+
+      // 在席（いま開いているか）。自分の記録だけ書き換えられる。
+      match /presence/{uid} {
+        allow read: if isSignedIn();
+        allow write: if isSignedIn() && request.auth.uid == uid;
+      }
+
       match /sessions/{sessionId} {
         allow read: if isSignedIn();
         allow write: if isAdmin();

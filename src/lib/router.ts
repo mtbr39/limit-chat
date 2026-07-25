@@ -5,10 +5,11 @@ export type Route =
   | { name: 'admin' }
   | { name: 'group'; groupId: string }
   | { name: 'session'; groupId: string; sessionId: string }
+  | { name: 'log'; groupId: string; dayKey: string }
   | { name: 'notFound' };
 
 /** グループのスラッグとして使えない予約語 */
-export const RESERVED_SLUGS = ['admin', 's', 'api', 'assets', 'static'];
+export const RESERVED_SLUGS = ['admin', 's', 'log', 'api', 'assets', 'static'];
 
 export function parsePath(pathname: string): Route {
   const parts = pathname.split('/').filter(Boolean).map(decodeURIComponent);
@@ -19,6 +20,9 @@ export function parsePath(pathname: string): Route {
   if (parts.length === 1) return { name: 'group', groupId: parts[0] };
   if (parts.length === 3 && parts[1] === 's') {
     return { name: 'session', groupId: parts[0], sessionId: parts[2] };
+  }
+  if (parts.length === 3 && parts[1] === 'log') {
+    return { name: 'log', groupId: parts[0], dayKey: parts[2] };
   }
   return { name: 'notFound' };
 }
@@ -43,6 +47,8 @@ export function useRoute() {
 export const groupPath = (groupId: string) => `/${encodeURIComponent(groupId)}`;
 export const sessionPath = (groupId: string, sessionId: string) =>
   `/${encodeURIComponent(groupId)}/s/${encodeURIComponent(sessionId)}`;
+export const logPath = (groupId: string, dayKey: string) =>
+  `/${encodeURIComponent(groupId)}/log/${encodeURIComponent(dayKey)}`;
 
 interface LinkProps {
   to: string;

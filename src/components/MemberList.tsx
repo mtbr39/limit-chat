@@ -1,12 +1,15 @@
 import { useState } from 'react';
 import { Membership } from '../types';
 import { useNow } from '../hooks/useNow';
+import { isOnline } from '../hooks/usePresence';
 import { formatTimeAgo, formatDateTime } from '../lib/survival';
 
 interface Props {
   members: Membership[];
   currentUserId: string | null;
   isMember: boolean;
+  /** uid ごとの最終在席時刻。オンライン判定と「何分前にオンライン」表示に使う */
+  lastSeen: Map<string, number>;
   onUpdateNote: (note: string) => Promise<void>;
   onUpdateName: (name: string) => Promise<void>;
 }
@@ -18,11 +21,13 @@ export function MemberList({
   members,
   currentUserId,
   isMember,
+  lastSeen,
   onUpdateNote,
   onUpdateName,
 }: Props) {
   const me = members.find((m) => m.id === currentUserId) ?? null;
-  const now = useNow(30 * 1000);
+  const now = useNow(15 * 1000);
+  const onlineCount = members.filter((m) => isOnline(lastSeen.get(m.id), now)).length;
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
@@ -67,13 +72,24 @@ export function MemberList({
 
   return (
     <section className="card">
-      <h2>メンバー {members.length}人</h2>
+      <h2>
+        メンバー {members.length}人
+        {onlineCount > 0 && (
+          <span className="online-count">
+            <span className="online-dot" />
+            {onlineCount}人がオンライン
+          </span>
+        )}
+      </h2>
 
       {members.length === 0 ? (
         <p className="empty">まだ誰も参加していません。</p>
       ) : (
         <ul className="member-list">
-          {members.map((m) => (
+          {members.map((m) => {
+            const seen = lastSeen.get(m.id);
+            const online = isOnline(seen, now);
+            return (
             <li key={m.id} className={m.id === currentUserId ? 'member me' : 'member'}>
               <div className="member-head">
                 {m.id === currentUserId && editingName ? (
@@ -98,6 +114,10 @@ export function MemberList({
                   </form>
                 ) : (
                   <>
+                    <span
+                      className={`presence-dot ${online ? 'online' : ''}`}
+                      title={online ? 'オンライン' : 'オフライン'}
+                    />
                     <span className="member-name">{m.name}</span>
                     {m.id === currentUserId && (
                       <>
@@ -115,6 +135,18 @@ export function MemberList({
                   </>
                 )}
               </div>
+              {online ? (
+                <p className="presence-line online">オンライン</p>
+              ) : seen != null ? (
+                <time
+                  className="presence-line"
+                  dateTime={new Date(seen).toISOString()}
+                >
+                  最終オンライン
+                  <span className="relative">{formatTimeAgo(seen, now)}</span>
+                  <span className="absolute">{formatDateTime(seen)}</span>
+                </time>
+              ) : null}
               {m.note ? (
                 <>
                   <p className="member-note">{m.note}</p>
@@ -136,7 +168,8 @@ export function MemberList({
                 <p className="member-note empty">ひとこと未設定</p>
               )}
             </li>
-          ))}
+            );
+          })}
         </ul>
       )}
 

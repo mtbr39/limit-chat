@@ -3,6 +3,7 @@ import { useRoute } from './lib/router';
 import { HomePage } from './pages/HomePage';
 import { GroupPage } from './pages/GroupPage';
 import { SessionPage } from './pages/SessionPage';
+import { LogPage } from './pages/LogPage';
 import { AdminPage } from './pages/AdminPage';
 
 function App() {
@@ -44,6 +45,17 @@ function App() {
           groupId={route.groupId}
           sessionId={route.sessionId}
           uid={uid}
+          navigate={navigate}
+        />
+      );
+
+    case 'log':
+      return (
+        <LogPage
+          groupId={route.groupId}
+          dayKey={route.dayKey}
+          uid={uid}
+          isAdmin={isAdmin}
           navigate={navigate}
         />
       );

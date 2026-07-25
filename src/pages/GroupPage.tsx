@@ -1,13 +1,17 @@
 import { useEffect, useRef } from 'react';
 import { useGroup } from '../hooks/useGroup';
+import { useChatDays } from '../hooks/useChat';
+import { usePresence } from '../hooks/usePresence';
 import { useNow } from '../hooks/useNow';
 import { LiveSession } from '../components/LiveSession';
+import { DailyChat } from '../components/DailyChat';
 import { MemberList } from '../components/MemberList';
 import { GroupJoinForm } from '../components/GroupJoinForm';
 import { NotifyToggle } from '../components/NotifyToggle';
 import { Session } from '../types';
-import { sessionPath, linkProps } from '../lib/router';
+import { sessionPath, logPath, linkProps } from '../lib/router';
 import { sessionPhase, formatRange, formatDuration } from '../lib/survival';
+import { dayKeyOf, formatDayLabel } from '../lib/day';
 import { notify } from '../lib/notify';
 
 interface Props {
@@ -28,6 +32,8 @@ export function GroupPage({ groupId, uid, isAdmin, navigate }: Props) {
     updateNote,
     updateName,
   } = useGroup(groupId, uid);
+  const chatDays = useChatDays(groupId);
+  const lastSeen = usePresence(groupId, uid, !!membership);
   const now = useNow(1000);
 
   // キャンセルされた回は参加者側には出さない
@@ -85,6 +91,10 @@ export function GroupPage({ groupId, uid, isAdmin, navigate }: Props) {
   // 一度でも参加した人（=メンバー）だけが過去の履歴を見られる
   const canSeeHistory = !!membership || isAdmin;
 
+  // 常時チャットの過去ログ（今日ぶんは進行中なので過去ログには出さない）
+  const todayKey = dayKeyOf(now);
+  const pastChatDays = chatDays.filter((d) => d.id !== todayKey);
+
   const sessionRow = (s: Session, note?: string) => (
     <li key={s.id}>
       <a {...linkProps({ to: sessionPath(group.id, s.id), navigate, className: 'session-item' })}>
@@ -116,34 +126,30 @@ export function GroupPage({ groupId, uid, isAdmin, navigate }: Props) {
 
       {!membership && <GroupJoinForm group={group} onJoin={joinGroup} />}
 
+      {/* 常時チャット。開催の有無にかかわらずこのグループの主役 */}
+      <DailyChat groupId={group.id} uid={uid} membership={membership} />
+
       {/*
-        開催されていない間は「ひとこと」が唯一のコミュニケーション手段なので、
-        メンバー一覧をメインコンテンツとして先頭に置く。
+        メンバー一覧。各行にオンライン（いまサイトを開いているか）の印を出す。
       */}
       <MemberList
         members={members}
         currentUserId={uid}
         isMember={!!membership}
+        lastSeen={lastSeen}
         onUpdateNote={updateNote}
         onUpdateName={updateName}
       />
 
-      {!liveSession && (
+      {!liveSession && upcoming.length > 0 && (
         <section className="card center">
-          <h2>いまは開催されていません</h2>
-          {upcoming.length > 0 ? (
-            <>
-              <p className="countdown-label">{upcoming[0].title} 開始まで</p>
-              <div className="countdown">
-                {formatDuration(upcoming[0].startTime - now)}
-              </div>
-              <p className="empty">
-                時間になるとこのページでチャットが始まります。
-              </p>
-            </>
-          ) : (
-            <p className="empty">次回の予定はまだ決まっていません。</p>
-          )}
+          <p className="countdown-label">{upcoming[0].title} 開始まで</p>
+          <div className="countdown">
+            {formatDuration(upcoming[0].startTime - now)}
+          </div>
+          <p className="empty">
+            時間になると、チャットの上に脱落ゲームが始まります。
+          </p>
         </section>
       )}
 
@@ -157,6 +163,34 @@ export function GroupPage({ groupId, uid, isAdmin, navigate }: Props) {
           </ul>
         </section>
       )}
+
+      <section className="card">
+        <h2>過去のチャット</h2>
+        {!canSeeHistory ? (
+          <p className="empty">
+            一度チャットに参加すると、過去のログを見られるようになります。
+          </p>
+        ) : pastChatDays.length === 0 ? (
+          <p className="empty">まだ過去ログがありません。</p>
+        ) : (
+          <ul className="session-list">
+            {pastChatDays.map((d) => (
+              <li key={d.id}>
+                <a
+                  {...linkProps({
+                    to: logPath(group.id, d.id),
+                    navigate,
+                    className: 'session-item',
+                  })}
+                >
+                  <span className="session-title">{formatDayLabel(d.id)}</span>
+                  <span className="session-rule">{d.messageCount} 件の発言</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <section className="card">
         <h2>過去のセッション</h2>

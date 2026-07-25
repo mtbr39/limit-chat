@@ -1036,6 +1036,72 @@ a.session-item:hover {
   flex: 1;
 }
 
+/* 常時チャット（カード内にチャットルームを埋める） */
+.chat-card .chat-room {
+  height: 55vh;
+  min-height: 340px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+/* オンライン在席の印 */
+.online-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-left: 0.6rem;
+  font-size: 0.78rem;
+  font-weight: normal;
+  color: var(--alive);
+  vertical-align: middle;
+}
+
+.online-dot,
+.presence-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.online-dot {
+  background: var(--alive);
+  box-shadow: 0 0 0 2px rgba(0, 100, 0, 0.2);
+}
+
+/* メンバー各行の印。オフラインは中抜き、オンラインは緑で点灯 */
+.presence-dot {
+  border: 1px solid var(--rule);
+  background: #fff;
+}
+
+.presence-dot.online {
+  border-color: var(--alive);
+  background: var(--alive);
+  box-shadow: 0 0 0 2px rgba(0, 100, 0, 0.2);
+}
+
+/* メンバー行の「最終オンライン」表示。ひとことの時刻と同じ相対＋絶対の並び */
+.presence-line {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-top: 0.3rem;
+  font-size: 0.75rem;
+  color: var(--faint);
+}
+
+.presence-line.online {
+  color: var(--alive);
+  font-weight: bold;
+}
+
+.presence-line .absolute::before {
+  content: '・';
+}
+
 /* Footer */
 .page-footer {
   display: flex;
@@ -1106,6 +1172,11 @@ a.ghost-link {
   .chat-area {
     height: 70vh;
     min-height: 60vh;
+  }
+
+  .chat-card .chat-room {
+    height: 65vh;
+    min-height: 55vh;
   }
 
   .member-list {
