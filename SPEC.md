@@ -334,3 +334,17 @@ src/
    ├─ MemberList.tsx      メンバーとひとこと＋オンライン印
    └─ SessionResult.tsx   終了後の結果表示
 ```
+
+---
+
+## デモモード（Firebase なし）
+
+`npm run dev:demo` / `npm run build:demo` で、Firebase を使わずに動くデモ版になる。
+
+- `vite.config.ts` が `--mode demo` のときだけ `firebase/app`・`firebase/auth`・`firebase/firestore` を `src/demo/` の代替実装に差し替える。アプリ本体のコードはそのまま。
+- データは localStorage に保存し、タブ間は storage イベントで同期する。匿名ユーザーはタブごとに別人（sessionStorage）。管理者ログインは任意のメール/パスワードで通る。
+- 初回（または3時間経過後）に「デモ部」（`/demo`）を初期データ付きで作る。開催中のサバイバルセッションではボット2人が会話・返事をし、1人は黙ったまま脱落する。
+- 画面上部に案内バー（リセットボタン付き）を出す。
+- Firestore 代替は、現在アプリが使う API（doc / collection / query / where('==') / orderBy / increment と読み書き・購読）だけを実装している。新しい API を使う場合は `src/demo/firestore.ts` にも追加すること。
+
+サブパスに置く場合（例: `/p/chat0125/`）は `--base /p/chat0125/` でビルドする。`lib/router.ts` は `import.meta.env.BASE_URL` を接頭辞として扱う（通常ビルドでは `/` なので影響なし）。

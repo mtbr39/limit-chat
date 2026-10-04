@@ -8,6 +8,17 @@ export type Route =
   | { name: 'log'; groupId: string; dayKey: string }
   | { name: 'notFound' };
 
+/**
+ * サブパスに置かれたとき（例: /p/chat0125/）の接頭辞。末尾スラッシュなし。
+ * 通常のビルドでは BASE_URL が "/" なので空文字になり、挙動は変わらない。
+ */
+const BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
+
+/** location.pathname からアプリ内のパス（BASE を除いたもの）を得る */
+function appPath(pathname: string): string {
+  return BASE && pathname.startsWith(BASE) ? pathname.slice(BASE.length) || '/' : pathname;
+}
+
 /** グループのスラッグとして使えない予約語 */
 export const RESERVED_SLUGS = ['admin', 's', 'log', 'api', 'assets', 'static'];
 
@@ -28,16 +39,16 @@ export function parsePath(pathname: string): Route {
 }
 
 export function useRoute() {
-  const [route, setRoute] = useState<Route>(() => parsePath(window.location.pathname));
+  const [route, setRoute] = useState<Route>(() => parsePath(appPath(window.location.pathname)));
 
   useEffect(() => {
-    const onPop = () => setRoute(parsePath(window.location.pathname));
+    const onPop = () => setRoute(parsePath(appPath(window.location.pathname)));
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
   }, []);
 
   const navigate = useCallback((to: string) => {
-    window.history.pushState({}, '', to);
+    window.history.pushState({}, '', BASE + to);
     setRoute(parsePath(to));
   }, []);
 
@@ -60,7 +71,7 @@ interface LinkProps {
 /** pushState でページ遷移するアンカー */
 export function linkProps({ to, navigate, className }: Omit<LinkProps, 'children'>) {
   return {
-    href: to,
+    href: BASE + to,
     className,
     onClick: (e: React.MouseEvent) => {
       if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
